@@ -18,17 +18,17 @@
 // @grant        GM_saveTab
 // @grant        GM_getTabs
 // @grant        unsafeWindow
-// @connect     oauth.hpbp.io
-// @connect    task.jysafe.cn
-// @connect    www.hpgamestream.com
-// @connect    rpc-prod.versussystems.com
-// @connect    api.hpbp.io
+// @connect      oauth.hpbp.io
+// @connect      task.jysafe.cn
+// @connect      www.hpgamestream.com
+// @connect      rpc-prod.versussystems.com
+// @connect      api.hpbp.io
 // @require      https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js
 // @require      https://cdn.jsdelivr.net/gh/jiyeme/OmenScript@2455ec2ff19eaf628b10d792bf2e95bbf28c8ff2/js/sha256.min.js
 // @icon         https://www.google.com/s2/favicons?domain=keylol.com
-// @updateURL   https://raw.githubusercontent.com/jiyeme/OmenScript/master/omen.user.js
-// @downloadURL     https://raw.githubusercontent.com/jiyeme/OmenScript/master/omen.user.js
-// @namespace  jiyecafe@gmail.com-omen
+// @updateURL    https://raw.githubusercontent.com/jiyeme/OmenScript/master/omen.user.js
+// @downloadURL  https://raw.githubusercontent.com/jiyeme/OmenScript/master/omen.user.js
+// @namespace    jiyecafe@gmail.com-omen
 // ==/UserScript==
 // TODO: 自动弹出地址？
 // @require      http://127.0.0.1:5500/js/main.ed19e0b4.chunk.js
@@ -150,9 +150,15 @@
                 name: "可参与列表",
                 action: loadChallengeList,
                 default: `
-                <ul id="omen-avaliable-list">
-                    <li><h2>可参与列表：</h2></li>
-                </ul>`
+                <div>
+                    <p>
+                        <input id="omen-avaliable-search" type="text" placeholder="请输入过滤关键字" />
+                        <button id="omen-avaliable-clear-btn">清空</button>
+                    </p>
+                    <ul id="omen-avaliable-list">
+                        <li><h2>可参与列表：</h2></li>
+                    </ul>
+                </div>`
             },
             {
                 id: "current",
@@ -286,10 +292,17 @@
             <select id="omen-account-switch" title="Omen账户">
             </select>
         </div>
+        <div id="omen-account-area">账户区域：
+            <select id="omen-account-area-switch" title="账户区域">
+                <option value="">---请选择---</option>
+                <option value="CN">中国</option>
+                <option value="US">美国</option>
+            </select>
+        </div>
         <div>
-            <a href="${link}" target="_blank" style="font-size:1.5rem">登录</a><br>
+            <a href="${link}" target="_blank" class="login-btn">登录</a><br>
             <label for="omen-localhost-link">
-                localhost地址: <input id="omen-localhost-link" type="text" style="width: 90%;" placeholder="请粘贴登录后那个不能访问的地址，然后回车" />
+                localhost地址: <input id="omen-localhost-link" type="text" placeholder="请粘贴登录后那个不能访问的地址，然后回车" />
             </label>
             <br>CODE:<span class="omen-code">等待...</span>
             <br>
@@ -324,11 +337,15 @@
         top: 10%;
         left: 15%;
         width: 70%;
-        background-color: #66bbff;
+        background-color: #22272e;
         height: 80%;
         z-index: 999;
         overflow:hidden;
         border-radius: .5rem;
+        color: #adbac7;
+    }
+    #omen-iframe a {
+        color: #539bf5;
     }
     #omen-iframe .omen-content{
         margin:1rem;
@@ -370,12 +387,43 @@
         background-color: #dddddd;
     }
     #omen-data{
-        border: solid 1px #f00;
+        border: solid 1px #444c56;
         padding: .5rem;
     }
     #omen-item-area > *{
         max-height: 35vh;
-        overflow-y: scroll;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    #omen-account-switch, #omen-account-area-switch, #omen-localhost-link, #omen-avaliable-search {
+        background-color: #2d333b;
+        color: #adbac7;
+    }
+    #omen-localhost-link {
+        width: 88%;
+    }
+    #omen-avaliable-search {
+        margin: 5px 0;
+        width: 90%;
+    }
+    .login-btn {
+        color: #adbac7;
+        font-size: 16px
+    }
+    .omen-avaliable-li:hover {
+        background: #2d333b;
+    }
+    .omen-avaliable-li button {
+        display: flex;
+        align-items: center;
+        float: right;
+        margin-right: 20px;
+        height: 18px;
+        line-height: 18px;
+        cursor: pointer;
+    }
+    .omen-avaliable-li:hover button {
+        background: #ccc;
     }
 </style>
             `;
@@ -393,6 +441,7 @@
                 btn.id = `omen-${ele.id}-btn`;
                 btn.innerText = ele.name;
                 btn.onclick = (e) => {
+                    jq("#omen-avaliable-search").val("");
                     jq("#omen-action-button > button").attr("disabled", false);
                     e.target.disabled = true;
 
@@ -425,7 +474,14 @@
             // 账户切换
             document.getElementById("omen-account-switch").onchange = (e) => {
                 ACCOUNT.change(document.getElementById("omen-account-switch").value)
-                sessionTokenUpdate();
+            }
+            // 账户区域切换
+            document.getElementById("omen-account-area-switch").onchange = (e) => {
+                const areaInfo = jq("#omen-account-area-switch").val()
+                console.log("areaInfo = ", areaInfo)
+                if (areaInfo !== null && areaInfo !== '') {
+                    sessionTokenUpdate();
+                }
             }
             // localhost地址输入事件
             document.getElementById("omen-localhost-link").onchange = (e) => {
@@ -471,8 +527,47 @@
             document.getElementById("omen-getsession").addEventListener("click", (e) => {
                 sessionTokenUpdate();
             })
+
+            // 处理过滤关键字输入框变化
+            document.getElementById("omen-avaliable-search").onchange = (e) => {
+                const keyword = e.target.value
+                // 过滤可参与列表
+                filterOmenAvaliableList(keyword)
+            }
+            // 处理过滤关键字输入框触发按键
+            jq("#omen-avaliable-search").keypress(function (e) {
+                if (e.which === 13) {
+                    $(this).blur()
+                }
+            })
+
+            document.getElementById("omen-avaliable-clear-btn").addEventListener("click", (e) => {
+                const keyword = ""
+                jq("#omen-avaliable-search").val(keyword)
+                filterOmenAvaliableList(keyword)
+            })
         }
 
+        // 过滤可参与列表
+        function filterOmenAvaliableList(keyword) {
+            if (keyword === null || keyword === '') {
+                jq("#omen-avaliable-list li").show();
+            } else {
+                jq("#omen-avaliable-list li").each(function () {
+                    const data = jq(this).text()
+                    if (data.toLowerCase().includes(keyword.toLowerCase())) {
+                        jq(this).show()
+                    } else {
+                        jq(this).hide()
+                    }
+                });
+            }
+        }
+
+        function switchArea(id) {
+            jq("#omen-item-area > *").css("display", "none");
+            jq("#" + id).css("display", "block");
+        }
         function loadChallengeList(id) {
             jq("#omen-avaliable-list").empty();
             OMEN.getChallengeList(omenInfo.sessionToken).then(res => {
@@ -480,11 +575,16 @@
                 let resp = res.response;
                 console.log(resp)
                 let list = resp.result.collection;
-                jq("#omen-avaliable-list").append(`<li >数量: ${list.length}</li>`);
+                let sweepstake_count = 0
 
                 list.forEach(item => {
+                    let category = item.prize.category
+                    if (category === "sweepstake") {
+                        sweepstake_count += 1
+                    }
+
                     let id = `${item.challengeStructureId}|${item.prize.campaignId}`
-                    jq("#omen-avaliable-list").append(`<li >${item.prize.displayName} - ${item.displayName}    <button id="${id}">参加</button></li>`)
+                    jq("#omen-avaliable-list").append(`<li class="omen-avaliable-li">[${category}]${item.prize.displayName} - ${item.displayName}    <button id="${id}">参加</button></li>`)
                     // 监听事件
                     document.getElementById(id).addEventListener("click", (e) => {
                         let id = e.target.id.split("|");
@@ -499,6 +599,8 @@
                         })
                     })
                 })
+
+                jq("#omen-avaliable-list").prepend(`<li style="font-weight: bold; font-size: 14px;">总数量: ${list.length} 抽奖数量：${sweepstake_count}</li>`);
 
             }).catch(err => {
                 console.log(err);
@@ -625,8 +727,15 @@
             }
         }
         function sessionTokenUpdate() {
+            const location_code = jq("#omen-account-area-switch").val();
+            console.log("location_code = ", location_code)
+            if (!location_code) {
+                alert("请先选择账户区域")
+                return
+            }
+
             jq("#omen-iframe .omen-sessionresult")[0].innerText = "更新中~";
-            return OMEN.getSession(omenInfo.auth.access_token).then(res => {
+            return OMEN.getSession(omenInfo.auth.access_token, location_code).then(res => {
                 console.log(res)
                 if (res.status === 200) {
                     jq("#omen-iframe .omen-sessionresult")[0].innerText = omenInfo.sessionToken = res.response.result.sessionId;
@@ -686,7 +795,7 @@
                 }
             })
         }
-        const getSession = (authorization) => {
+        const getSession = (authorization, location_code) => {
             let url = "https://www.hpgamestream.com/api/thirdParty/session/temporaryToken?applicationId=" + ApplicationId
             return HTTP.GET(url, {
                 dataType: "json",
@@ -704,7 +813,7 @@
             }).then(res => {
                 console.log(res)
                 res = res.response;
-                return RPCRequest(OMEN_BODY.start(res.result.token, res.result.players[0].externalPlayerId));
+                return RPCRequest(OMEN_BODY.start(res.result.token, res.result.players[0].externalPlayerId, location_code));
             })
         }
         const getUserinfo = (authorization) => {
@@ -798,11 +907,33 @@
             body.params.pageSize = 10;
             return body;
         }
-        const start = (token, externalPlayerId) => {
+        const start = (token, externalPlayerId, location_code) => {
 
-            //let uinfo = JSON.parse(window.atob(omenAuth.access_token.split(".")[1]))
+            //let uinfo = JSON.parse(window.atob(omenInfo.access_token.split(".")[1]))
             //body.params.accountToken = token;
             //body.params.externalPlayerId = uinfo.hpid_user_id;
+
+            let location;
+            switch (location_code) {
+                case 'CN':
+                    location = {
+                        "latitude": 30.5823078,
+                        "longitude": 103.984428
+                    }
+                    break
+                case 'US':
+                    location = {
+                        "latitude": 36.512811,
+                        "longitude": -118.736584
+                    }
+                    break
+                default:
+                    location = {
+                        "latitude": 30.5823078,
+                        "longitude": 103.984428
+                    }
+            }
+
             return {
                 "jsonrpc": "2.0",
                 "id": ApplicationId,
@@ -1038,10 +1169,7 @@
                         "eu4",
                         "eso64"
                     ],
-                    "location": {
-                        "latitude": 30.5823078,
-                        "longitude": 103.984428
-                    },
+                    "location": location,
                     "sdk": "custom01",
                     "sdkVersion": "3.0.0",
                     "appDefaultLanguage": "en",
